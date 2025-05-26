@@ -66,9 +66,13 @@ jobs:
         echo "All tests passed"
         echo "TEST_STATUS=pass" >> $GITHUB_ENV
 
-    # ----------------------------------
+        # ----------------------------------
     # 3. DEPLOY
     # ----------------------------------
+    - name: Ensure namespace exists
+      run: |
+        kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
     - name: Deploy
       if: env.TEST_STATUS == 'pass'
       run: |
