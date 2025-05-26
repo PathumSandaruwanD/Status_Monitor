@@ -17,36 +17,41 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-        # ----------------------------------
+    # ----------------------------------
     # 1. SETUP ENVIRONMENT
     # ----------------------------------
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Cleanup existing Minikube (if any)
+    - name: Install Minikube and kubectl
       run: |
-        minikube delete --all --purge || true
-        docker system prune -af || true
-        sudo rm -rf /tmp/minikube /var/lib/minikube || true
-
-    - name: Install Minikube
-      run: |
+        # Install matching kubectl version
+        curl -LO "https://dl.k8s.io/release/v1.33.1/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        
+        # Install Minikube
         curl -LO https://storage.googleapis.com/minikube/releases/v1.35.0/minikube-linux-amd64
         sudo install minikube-linux-amd64 /usr/local/bin/minikube
-        minikube version
 
     - name: Start Minikube cluster
       run: |
-        minikube start --driver=docker --container-runtime=containerd --kubernetes-version=v1.27.0
+        # Force clean start
+        minikube delete --all --purge || true
+        minikube start \
+          --driver=docker \
+          --container-runtime=containerd \
+          --kubernetes-version=v1.27.0 \
+          --force
         minikube status
 
     # ----------------------------------
     # 2. BUILD & TEST
     # ----------------------------------
-    - name: Set up Docker for Minikube
+    - name: Set up Docker environment
       run: |
+        # Properly configure Docker environment
         eval $(minikube docker-env)
-        echo "DOCKER_HOST=$(minikube ip):2376" >> $GITHUB_ENV
+        docker ps  # Verify connection
 
     - name: Build Docker image
       run: |
@@ -69,8 +74,6 @@ jobs:
       run: |
         kubectl apply -f backend/deployment.yaml -n ${{ env.K8S_NAMESPACE }}
         kubectl apply -f backend/service.yaml -n ${{ env.K8S_NAMESPACE }}
-        echo "Deployment completed"
-        
         kubectl rollout status deployment/${{ env.APP_NAME }}-deployment -n ${{ env.K8S_NAMESPACE }} --timeout=120s
 
     # ----------------------------------
@@ -78,11 +81,5 @@ jobs:
     # ----------------------------------
     - name: Verify deployment
       run: |
-        echo "=== DEPLOYMENT STATUS ==="
-        kubectl get deployments -n ${{ env.K8S_NAMESPACE }} -o wide
-        
-        echo "\n=== SERVICE ENDPOINTS ==="
+        kubectl get all -n ${{ env.K8S_NAMESPACE }}
         minikube service ${{ env.APP_NAME }}-service -n ${{ env.K8S_NAMESPACE }} --url
-        
-        echo "\n=== POD LOGS ==="
-        kubectl logs -l app=${{ env.APP_NAME }} -n ${{ env.K8S_NAMESPACE }} --tail=50
