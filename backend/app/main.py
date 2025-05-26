@@ -3,12 +3,22 @@ from sqlalchemy.orm import Session
 import requests
 from app import models, schemas, crud
 from app.database import SessionLocal, engine
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create the database tables
 models.Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(title="Service Monitor API", version="0.1.0")
+
+#CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # 👈 React dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Dependency to get a DB session
 def get_db():
@@ -38,6 +48,15 @@ def read_statuses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 def external_users():
     try:
         response = requests.get("https://fake-json-api.mock.beeceptor.com/users")
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/Srilankan Airline/")
+def external_users():
+    try:
+        response = requests.get("https://www.srilankan.com/")
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
