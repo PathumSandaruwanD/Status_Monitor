@@ -17,12 +17,18 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    # ----------------------------------
+        # ----------------------------------
     # 1. SETUP ENVIRONMENT
     # ----------------------------------
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Cleanup existing Minikube (if any)
+      run: |
+        minikube delete --all --purge || true
+        docker system prune -af || true
+        sudo rm -rf /tmp/minikube /var/lib/minikube || true
+
     - name: Install Minikube
       run: |
         curl -LO https://storage.googleapis.com/minikube/releases/v1.35.0/minikube-linux-amd64
