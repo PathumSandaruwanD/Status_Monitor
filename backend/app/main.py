@@ -53,7 +53,7 @@ def external_users():
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.get("/Srilankan Airline/")
+@app.get("/TEST1/")
 def external_users():
     try:
         response = requests.get("https://www.srilankan.com/")
